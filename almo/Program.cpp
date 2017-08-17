@@ -35,8 +35,10 @@ void Program::attach(std::shared_ptr<Shader> shader) {
 
 
 void Program::link() {
+    // link
     glLinkProgram(m_id);
 
+    // any errors?
     int result;
     glGetProgramiv(m_id, GL_LINK_STATUS, &result);
     if (result != GL_TRUE) {
@@ -52,11 +54,20 @@ void Program::link() {
         throw EXIT_FAILURE;
     }
 
+    // release the shaders
+    for (auto const & shader: m_shaders) {
+        glDetachShader(m_id, shader->getId());
+    }
     m_shaders.clear();
 }
 
 
 void Program::use() {
     glUseProgram(m_id);
+}
+
+
+GLuint Program::getUniformLocation(const std::string& name) const {
+    return glGetUniformLocation(m_id, name.c_str());
 }
 
