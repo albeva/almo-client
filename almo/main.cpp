@@ -13,7 +13,7 @@
 using namespace almo;
 
 
-int main(int argc, const char * argv[]) {
+int main(int argc, char * argv[]) {
 
     Display display(800, 600);
 
@@ -55,7 +55,7 @@ int main(int argc, const char * argv[]) {
         glDrawArrays(GL_TRIANGLES, 0, 3);
         display.swap();
     }
-    exit_loop:
+exit_loop:
 
 
     return EXIT_SUCCESS;

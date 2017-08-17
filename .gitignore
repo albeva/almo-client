@@ -9,3 +9,5 @@ xcuserdata/
 # cmake
 /cmake-build-debug
 /cmake-build-release
+/.vs
+/x64
