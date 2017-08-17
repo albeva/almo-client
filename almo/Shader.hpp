@@ -8,6 +8,7 @@
 #pragma once
 #include <GL/glew.h>
 #include <string>
+#include <memory>
 
 namespace almo {
 
