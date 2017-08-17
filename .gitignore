@@ -1,0 +1,11 @@
+# genric folders
+/bin
+/obj
+
+# project folders
+.idea
+xcuserdata/
+
+# cmake
+/cmake-build-debug
+/cmake-build-release
