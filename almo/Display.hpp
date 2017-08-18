@@ -8,6 +8,7 @@
 #pragma once
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <string>
 
 namespace almo {
 
@@ -17,11 +18,13 @@ namespace almo {
     class Display {
     public:
 
-        Display(int width, int height);
+        Display(const std::string& title, int width, int height);
 
         ~Display();
 
         void swap();
+
+        void setTitle(const std::string& title);
 
         int getWidth() const { return m_width; }
         

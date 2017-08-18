@@ -22,7 +22,7 @@ using namespace almo;
 int main(int argc, char * argv[])
 {
     // screen
-    Display display(800, 600);
+    Display display("Almo", 800, 600);
 
     // shader
     Program program;
@@ -142,7 +142,7 @@ int main(int argc, char * argv[])
         frameCounter += 1;
         auto currentTime = std::chrono::steady_clock::now();
         if (currentTime - startTime >= std::chrono::seconds{1}) {
-            std::cout << "FPS: " << frameCounter << std::endl;
+            display.setTitle(std::string("Almo - ") + std::to_string(frameCounter) + "fps");
             startTime = currentTime;
             frameCounter = 0;
         }
