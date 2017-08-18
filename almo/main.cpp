@@ -14,6 +14,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <thread>
+#include <chrono>
+#include <iostream>
 using namespace almo;
 
 
@@ -34,16 +36,14 @@ int main(int argc, char * argv[])
     GLint attribute_coord3d, attribute_v_color;
     GLint uniform_mvp;
 
-    // progra,
+    // program
     attribute_coord3d = 0; //program.getAttribLocation("coord3d");
     attribute_v_color = 1; //program.getAttribLocation("v_color");
     uniform_mvp = program.getUniformLocation("MVP");
 
-
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
-
 
     GLfloat cube_vertices[] = {
         // front
@@ -118,9 +118,13 @@ int main(int argc, char * argv[])
 
     // view
     glm::mat4 projection = glm::perspective(45.0f, (float)display.getWidth() / (float)display.getHeight(), 0.1f, 10.0f);
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
-    glm::vec3 axis_y(0, 1, 0);
+    glm::vec3 axis_y(0.3, 0.6, 0.9);
+
+    // fps meter
+    size_t frameCounter = 0;
+    auto startTime = std::chrono::steady_clock::now();
 
     // MARK: Run the loop
     SDL_Event event;
@@ -131,6 +135,16 @@ int main(int argc, char * argv[])
             if (event.type == SDL_QUIT) {
                 return EXIT_SUCCESS;
             }
+        }
+
+        // FPS
+        // ----------------------------------------
+        frameCounter += 1;
+        auto currentTime = std::chrono::steady_clock::now();
+        if (currentTime - startTime >= std::chrono::seconds{1}) {
+            std::cout << "FPS: " << frameCounter << std::endl;
+            startTime = currentTime;
+            frameCounter = 0;
         }
 
         // clear
@@ -152,15 +166,12 @@ int main(int argc, char * argv[])
         glEnableVertexAttribArray(attribute_coord3d);
         glEnableVertexAttribArray(attribute_v_color);
         glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
-
-        // clean up
         glDisableVertexAttribArray(attribute_coord3d);
         glDisableVertexAttribArray(attribute_v_color);
 
         // swap
         // ----------------------------------------
         display.swap();
-        std::this_thread::yield();
     }
 
     return EXIT_SUCCESS;
