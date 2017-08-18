@@ -11,3 +11,5 @@ xcuserdata/
 /cmake-build-release
 /.vs
 /x64
+/build
+
