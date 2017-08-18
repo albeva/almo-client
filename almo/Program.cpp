@@ -68,6 +68,20 @@ void Program::use() {
 
 
 GLuint Program::getUniformLocation(const std::string& name) const {
-    return glGetUniformLocation(m_id, name.c_str());
+    auto loc =  glGetUniformLocation(m_id, name.c_str());
+    if (loc == -1) {
+        std::cerr << "Could not find uniform '" << name << "'" << std::endl;
+        throw EXIT_FAILURE;
+    }
+    return loc;
 }
 
+
+GLuint Program::getAttribLocation(const std::string& name) const {
+    auto loc = glGetAttribLocation(m_id, name.c_str());
+    if (loc == -1) {
+        std::cerr << "Could not find attribute '" << name << "'" << std::endl;
+        throw EXIT_FAILURE;
+    }
+    return loc;
+}

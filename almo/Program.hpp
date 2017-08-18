@@ -30,6 +30,8 @@ namespace almo {
 
         GLuint getUniformLocation(const std::string& name) const;
 
+        GLuint getAttribLocation(const std::string& name) const;
+
     private:
         GLuint m_id;
         std::vector<std::shared_ptr<Shader>> m_shaders;
