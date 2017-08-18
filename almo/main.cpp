@@ -12,8 +12,6 @@
 #include <SDL2/SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <chrono>
 #include <thread>
 using namespace almo;
 
@@ -174,7 +172,7 @@ int main(int argc, char * argv[]) {
         display.swap();
 
         // prevent the loop from hogging 100% cpu
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::yield();
     }
 exit_loop:
 
