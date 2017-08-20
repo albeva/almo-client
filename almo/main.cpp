@@ -9,6 +9,7 @@
 #include "Shader.hpp"
 #include "Program.hpp"
 #include "Camera.hpp"
+#include "Engine.hpp"
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
@@ -22,221 +23,228 @@
 using namespace almo;
 
 
-int main(int argc, char * argv[])
+class MainGame: public Engine
 {
-    // screen
-    Display display("Almo", 800, 600);
-
-    // shader
-    Program program;
-    program.attach(Shader::fromFile("simple.frag", GL_FRAGMENT_SHADER));
-    program.attach(Shader::fromFile("simple.vert", GL_VERTEX_SHADER));
-    program.link();
-    program.use();
-
-    // attribs and uniforms
-    GLint attribute_coord3d = program.getAttribLocation("pos");
-    GLint attribute_v_color = program.getAttribLocation("color");
-
-    GLuint VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-
-    GLfloat cube_vertices[] = {
-        // front
-        -1.0, -1.0,  1.0,
-        1.0, -1.0,  1.0,
-        1.0,  1.0,  1.0,
-        -1.0,  1.0,  1.0,
-        // back
-        -1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0,
-        1.0,  1.0, -1.0,
-        -1.0,  1.0, -1.0,
-    };
-
-    GLuint vbo_cube_vertices;
-    glGenBuffers(1, &vbo_cube_vertices);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(attribute_coord3d, // attribute
-                          3,                 // number of elements per vertex, here (x,y,z)
-                          GL_FLOAT,          // the type of each element
-                          GL_FALSE,          // take our values as-is
-                          0,                 // no extra data between each position
-                          0                  // offset of first element
-                          );
-
-    GLfloat cube_colors[] = {
-        // front colors
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        // back colors
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        //
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-    };
-
-    GLuint vbo_cube_colors;
-    glGenBuffers(1, &vbo_cube_colors);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
-    glVertexAttribPointer(attribute_v_color, // attribute
-                          3,                 // number of elements per vertex, here (x,y,z)
-                          GL_FLOAT,          // the type of each element
-                          GL_FALSE,          // take our values as-is
-                          0,                 // no extra data between each position
-                          0                  // offset of first element
-                          );
-
-    GLushort cube_elements[] = {
-        // front
-        0, 1, 2,
-        2, 3, 0,
-        // top
-        1, 5, 6,
-        6, 2, 1,
-        // back
-        7, 6, 5,
-        5, 4, 7,
-        // bottom
-        4, 0, 3,
-        3, 7, 4,
-        // left
-        4, 5, 1,
-        1, 0, 4,
-        // right
-        3, 2, 6,
-        6, 7, 3,
-    };
-    GLuint ibo_cube_elements;
-    glGenBuffers(1, &ibo_cube_elements);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
-    int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-    GLsizei elementSize = size / sizeof(GLushort);
+    // shader program
+    Program m_program;
+    // vertex attibute
+    GLint m_attribute_coord3d;
+    // color attribute
+    GLint m_attribute_v_color;
+    // element size
+    GLsizei m_elementSize;
+    // attribute locations
+    GLint m_projectionLoc;
+    GLint m_viewLoc;
+    GLint m_modelLoc;
+    // model
+    glm::mat4 m_model;
+    glm::vec3 m_axis_y;
+    // keyboard moevements
+    bool m_move[4];
 
 
-    // set up camera
+    // Set up
+    virtual void init() override
+    {
+        // shader
+        m_program.attach(Shader::fromFile("simple.frag", GL_FRAGMENT_SHADER));
+        m_program.attach(Shader::fromFile("simple.vert", GL_VERTEX_SHADER));
+        m_program.link();
+        m_program.use();
 
-    GLint projectionLoc = program.getUniformLocation("projection");
-    GLint viewLoc       = program.getUniformLocation("view");
-    GLint modelLoc      = program.getUniformLocation("model");
+        // attribs and uniforms
+        m_attribute_coord3d = m_program.getAttribLocation("pos");
+        m_attribute_v_color = m_program.getAttribLocation("color");
 
-    // cube
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
-    glm::vec3 axis_y(.3f, .6f, .9f);
+        GLuint VAO;
+        glGenVertexArrays(1, &VAO);
+        glBindVertexArray(VAO);
 
-    // camera
-    Camera camera;
+        GLfloat cube_vertices[] = {
+            // front
+            -1.0, -1.0,  1.0,
+            1.0, -1.0,  1.0,
+            1.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            // back
+            -1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0,  1.0, -1.0,
+            -1.0,  1.0, -1.0,
+        };
 
-    // fps meter
-    size_t frameCounter = 0;
-    auto startTime = std::chrono::steady_clock::now();
-    bool keys[1024];
+        GLuint vbo_cube_vertices;
+        glGenBuffers(1, &vbo_cube_vertices);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+        glVertexAttribPointer(m_attribute_coord3d, // attribute
+                              3,                   // number of elements per vertex, here (x,y,z)
+                              GL_FLOAT,            // the type of each element
+                              GL_FALSE,            // take our values as-is
+                              0,                   // no extra data between each position
+                              0                    // offset of first element
+                              );
 
-    // MARK: Run the loop
-    SDL_Event event;
-    while (true) {
-        // handle events
-        // ----------------------------------------
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_QUIT:
-                    return EXIT_SUCCESS;
-                    break;
-                case SDL_MOUSEMOTION:
-                    camera.processMouseMovement((float)event.motion.xrel, -(float)event.motion.yrel);
-                    break;
-                case SDL_MOUSEWHEEL:
-                    camera.processMouseScroll((float)event.wheel.y / 10);
-                    break;
-                case SDL_KEYDOWN:
-                {
-                    auto code = event.key.keysym.sym;
-                    if (code >= 0 && code < sizeof(keys)) {
-                        keys[code] = true;
-                    }
-                    break;
-                }
-                case SDL_KEYUP:
-                {
-                    auto code = event.key.keysym.sym;
-                    if (code >= 0 && code < sizeof(keys)) {
-                        keys[code] = false;
-                    }
-                    break;
-                }
-            }
-        }
+        GLfloat cube_colors[] = {
+            // front colors
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            // back colors
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            //
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+        };
 
-        // FPS
-        // ----------------------------------------
-        frameCounter += 1;
-        auto currentTime = std::chrono::steady_clock::now();
-        if (currentTime - startTime >= std::chrono::seconds{1}) {
-            display.setTitle(std::string("Almo - ") + std::to_string(frameCounter) + "fps");
-            startTime = currentTime;
-            frameCounter = 0;
-        }
+        GLuint vbo_cube_colors;
+        glGenBuffers(1, &vbo_cube_colors);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
+        glVertexAttribPointer(m_attribute_v_color, // attribute
+                              3,                   // number of elements per vertex, here (x,y,z)
+                              GL_FLOAT,            // the type of each element
+                              GL_FALSE,            // take our values as-is
+                              0,                   // no extra data between each position
+                              0                    // offset of first element
+                              );
 
-        // clear
-        // ----------------------------------------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        GLushort cube_elements[] = {
+            // front
+            0, 1, 2,
+            2, 3, 0,
+            // top
+            1, 5, 6,
+            6, 2, 1,
+            // back
+            7, 6, 5,
+            5, 4, 7,
+            // bottom
+            4, 0, 3,
+            3, 7, 4,
+            // left
+            4, 5, 1,
+            1, 0, 4,
+            // right
+            3, 2, 6,
+            6, 7, 3,
+        };
+        GLuint ibo_cube_elements;
+        glGenBuffers(1, &ibo_cube_elements);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
+        int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+        m_elementSize = size / sizeof(GLushort);
 
-        // logic
-        // ----------------------------------------
-        glm::mat4 projection = glm::perspective(camera.getZoom(), (float)display.getWidth() / (float)display.getHeight(), 0.1f, 100.0f);
-        program.setUniform(projectionLoc, projection);
+        // vars
+        m_projectionLoc = m_program.getUniformLocation("projection");
+        m_viewLoc       = m_program.getUniformLocation("view");
+        m_modelLoc      = m_program.getUniformLocation("model");
 
-        // Camera controls
-        if( keys[SDLK_w])
-        {
-            camera.processKeyboard(Camera::FORWARD, 0.2);
-        }
-
-        if( keys[SDLK_s])
-        {
-            camera.processKeyboard(Camera::BACKWARD, 0.2);
-        }
-
-        if( keys[SDLK_a])
-        {
-            camera.processKeyboard(Camera::LEFT, 0.2);
-        }
-
-        if( keys[SDLK_d])
-        {
-            camera.processKeyboard(Camera::RIGHT, 0.2);
-        }
-
-        float angle = SDL_GetTicks() / 1000.0 * 90;  // 45° per second
-        glm::mat4 anim = glm::rotate(model, glm::radians(angle), axis_y);
-        program.setUniform(modelLoc, anim);
-        auto view = camera.getViewMatrix();
-        program.setUniform(viewLoc, view);
-
-        // draw
-        // ----------------------------------------
-        glEnableVertexAttribArray(attribute_coord3d);
-        glEnableVertexAttribArray(attribute_v_color);
-        glDrawElements(GL_TRIANGLES, elementSize, GL_UNSIGNED_SHORT, 0);
-        glDisableVertexAttribArray(attribute_coord3d);
-        glDisableVertexAttribArray(attribute_v_color);
-
-        // swap
-        // ----------------------------------------
-        display.swap();
+        // cube
+        m_model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
+        m_axis_y = glm::vec3(.3f, .6f, .9f);
     }
 
+
+    // Render
+    virtual void render() override
+    {
+        // logic
+        // ----------------------------------------
+        glm::mat4 projection = glm::perspective(getCamera().getZoom(), (float)getDisplay().getWidth() / (float)getDisplay().getHeight(), 0.1f, 100.0f);
+        m_program.setUniform(m_projectionLoc, projection);
+
+        // Camera controls
+        if (m_move[Camera::FORWARD]) {
+            getCamera().processKeyboard(Camera::FORWARD, 0.2);
+        }
+
+        if (m_move[Camera::BACKWARD]) {
+            getCamera().processKeyboard(Camera::BACKWARD, 0.2);
+        }
+
+        if (m_move[Camera::LEFT]) {
+            getCamera().processKeyboard(Camera::LEFT, 0.2);
+        }
+
+        if (m_move[Camera::RIGHT]) {
+            getCamera().processKeyboard(Camera::RIGHT, 0.2);
+        }
+
+        // animate cube
+        float angle = SDL_GetTicks() / 1000.0 * 90;
+        glm::mat4 anim = glm::rotate(m_model, glm::radians(angle), m_axis_y);
+        m_program.setUniform(m_modelLoc, anim);
+
+        // camera
+        auto view = getCamera().getViewMatrix();
+        m_program.setUniform(m_viewLoc, view);
+
+        // draw
+        glEnableVertexAttribArray(m_attribute_coord3d);
+        glEnableVertexAttribArray(m_attribute_v_color);
+        glDrawElements(GL_TRIANGLES, m_elementSize, GL_UNSIGNED_SHORT, 0);
+        glDisableVertexAttribArray(m_attribute_coord3d);
+        glDisableVertexAttribArray(m_attribute_v_color);
+    }
+
+
+    // Handle events
+    virtual void handle(const SDL_Event& event) override
+    {
+        switch (event.type) {
+            case SDL_MOUSEMOTION:
+                getCamera().processMouseMovement((float)event.motion.xrel, -(float)event.motion.yrel);
+                break;
+            case SDL_MOUSEWHEEL:
+                getCamera().processMouseScroll((float)event.wheel.y / 10);
+                break;
+            case SDL_KEYDOWN:
+                handleKey(event.key.keysym.scancode, true);
+                break;
+            case SDL_KEYUP:
+                handleKey(event.key.keysym.scancode, false);
+                break;
+        }
+    }
+
+
+    // handle keys
+    void handleKey(SDL_Scancode code, bool pressed) {
+        switch (code) {
+            case SDL_SCANCODE_W:
+            case SDL_SCANCODE_UP:
+                m_move[Camera::FORWARD] = pressed;
+                break;
+            case SDL_SCANCODE_S:
+            case SDL_SCANCODE_DOWN:
+                m_move[Camera::BACKWARD] = pressed;
+                break;
+            case SDL_SCANCODE_A:
+            case SDL_SCANCODE_LEFT:
+                m_move[Camera::LEFT] = pressed;
+                break;
+            case SDL_SCANCODE_D:
+            case SDL_SCANCODE_RIGHT:
+                m_move[Camera::RIGHT] = pressed;
+                break;
+            default:
+                return;
+        }
+    }
+};
+
+
+int main(int argc, char * argv[])
+{
+    return MainGame().run();
     return EXIT_SUCCESS;
 }
