@@ -142,8 +142,6 @@ int main(int argc, char * argv[])
     size_t frameCounter = 0;
     auto startTime = std::chrono::steady_clock::now();
     bool keys[1024];
-    GLfloat deltaTime = 0.0f;
-    GLfloat lastFrame = 0.0f;
 
     // MARK: Run the loop
     SDL_Event event;
@@ -198,7 +196,7 @@ int main(int argc, char * argv[])
         // logic
         // ----------------------------------------
         glm::mat4 projection = glm::perspective(camera.getZoom(), (float)display.getWidth() / (float)display.getHeight(), 0.1f, 100.0f);
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        program.setUniform(projectionLoc, projection);
 
         // Camera controls
         if( keys[SDLK_w])
@@ -223,9 +221,9 @@ int main(int argc, char * argv[])
 
         float angle = SDL_GetTicks() / 1000.0 * 90;  // 45° per second
         glm::mat4 anim = glm::rotate(model, glm::radians(angle), axis_y);
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(anim));
+        program.setUniform(modelLoc, anim);
         auto view = camera.getViewMatrix();
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        program.setUniform(viewLoc, view);
 
         // draw
         // ----------------------------------------

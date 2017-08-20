@@ -8,6 +8,7 @@
 #include "Program.hpp"
 #include "Shader.hpp"
 #include <iostream>
+#include <glm/gtc/type_ptr.hpp>
 #include <SDL2/SDL.h>
 using namespace almo;
 
@@ -84,4 +85,16 @@ GLuint Program::getAttribLocation(const std::string& name) const {
         throw EXIT_FAILURE;
     }
     return loc;
+}
+
+
+void Program::setUniform(GLint loc, const glm::mat4& matrix)
+{
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matrix));
+}
+
+
+void Program::setUniform(const std::string& name, const glm::mat4& matrix)
+{
+    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
 }
