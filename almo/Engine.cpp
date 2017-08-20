@@ -50,6 +50,12 @@ int Engine::run() {
             switch (event.type) {
                 case SDL_QUIT:
                     return EXIT_SUCCESS;
+                case SDL_KEYUP:
+                {
+                    if (event.key.keysym.scancode == SDL_SCANCODE_Q || event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                        return EXIT_SUCCESS;
+                    }
+                }
             }
             handle(event);
         }
