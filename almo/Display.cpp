@@ -47,7 +47,10 @@ Display::Display(const std::string& title, int width, int height)
         throw EXIT_FAILURE;
     }
 
-    SDL_GL_SetSwapInterval(0);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_ShowCursor(SDL_DISABLE);
+
+    // SDL_GL_SetSwapInterval(0);
     SDL_GL_GetDrawableSize(m_window, &m_width, &m_height);
     glViewport(0, 0, m_width, m_height);
 

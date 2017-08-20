@@ -8,6 +8,8 @@
 #include "Display.hpp"
 #include "Shader.hpp"
 #include "Program.hpp"
+#include "Camera.hpp"
+
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <glm/glm.hpp>
@@ -16,6 +18,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+
 using namespace almo;
 
 
@@ -29,17 +32,11 @@ int main(int argc, char * argv[])
     program.attach(Shader::fromFile("simple.frag", GL_FRAGMENT_SHADER));
     program.attach(Shader::fromFile("simple.vert", GL_VERTEX_SHADER));
     program.link();
+    program.use();
 
-    // MARK: setup the scene
-    GLuint vbo_cube_vertices, vbo_cube_colors;
-    GLuint ibo_cube_elements;
-    GLint attribute_coord3d, attribute_v_color;
-    GLint uniform_mvp;
-
-    // program
-    attribute_coord3d = 0; //program.getAttribLocation("coord3d");
-    attribute_v_color = 1; //program.getAttribLocation("v_color");
-    uniform_mvp = program.getUniformLocation("MVP");
+    // attribs and uniforms
+    GLint attribute_coord3d = program.getAttribLocation("pos");
+    GLint attribute_v_color = program.getAttribLocation("color");
 
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
@@ -57,6 +54,8 @@ int main(int argc, char * argv[])
         1.0,  1.0, -1.0,
         -1.0,  1.0, -1.0,
     };
+
+    GLuint vbo_cube_vertices;
     glGenBuffers(1, &vbo_cube_vertices);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
@@ -71,15 +70,22 @@ int main(int argc, char * argv[])
     GLfloat cube_colors[] = {
         // front colors
         1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0,
-        1.0, 1.0, 1.0,
-        // back colors
         1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        // back colors
         0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        //
         0.0, 0.0, 1.0,
-        1.0, 1.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
     };
+
+    GLuint vbo_cube_colors;
     glGenBuffers(1, &vbo_cube_colors);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
@@ -111,20 +117,33 @@ int main(int argc, char * argv[])
         3, 2, 6,
         6, 7, 3,
     };
+    GLuint ibo_cube_elements;
     glGenBuffers(1, &ibo_cube_elements);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
     int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+    GLsizei elementSize = size / sizeof(GLushort);
 
-    // view
-    glm::mat4 projection = glm::perspective(45.0f, (float)display.getWidth() / (float)display.getHeight(), 0.1f, 10.0f);
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
+
+    // set up camera
+
+    GLint projectionLoc = program.getUniformLocation("projection");
+    GLint viewLoc       = program.getUniformLocation("view");
+    GLint modelLoc      = program.getUniformLocation("model");
+
+    // cube
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
-    glm::vec3 axis_y(0.3, 0.6, 0.9);
+    glm::vec3 axis_y(.3f, .6f, .9f);
+
+    // camera
+    Camera camera;
 
     // fps meter
     size_t frameCounter = 0;
     auto startTime = std::chrono::steady_clock::now();
+    bool keys[1024];
+    GLfloat deltaTime = 0.0f;
+    GLfloat lastFrame = 0.0f;
 
     // MARK: Run the loop
     SDL_Event event;
@@ -132,8 +151,32 @@ int main(int argc, char * argv[])
         // handle events
         // ----------------------------------------
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                return EXIT_SUCCESS;
+            switch (event.type) {
+                case SDL_QUIT:
+                    return EXIT_SUCCESS;
+                    break;
+                case SDL_MOUSEMOTION:
+                    camera.processMouseMovement((float)event.motion.xrel, -(float)event.motion.yrel);
+                    break;
+                case SDL_MOUSEWHEEL:
+                    camera.processMouseScroll((float)event.wheel.y / 10);
+                    break;
+                case SDL_KEYDOWN:
+                {
+                    auto code = event.key.keysym.sym;
+                    if (code >= 0 && code < sizeof(keys)) {
+                        keys[code] = true;
+                    }
+                    break;
+                }
+                case SDL_KEYUP:
+                {
+                    auto code = event.key.keysym.sym;
+                    if (code >= 0 && code < sizeof(keys)) {
+                        keys[code] = false;
+                    }
+                    break;
+                }
             }
         }
 
@@ -154,18 +197,41 @@ int main(int argc, char * argv[])
 
         // logic
         // ----------------------------------------
-        float angle = SDL_GetTicks() / 1000.0 * 45;  // 45° per second
-        glm::mat4 anim = glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis_y);
-        glm::mat4 mvp = projection * view * model * anim;
+        glm::mat4 projection = glm::perspective(camera.getZoom(), (float)display.getWidth() / (float)display.getHeight(), 0.1f, 100.0f);
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        program.use();
-        glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+        // Camera controls
+        if( keys[SDLK_w])
+        {
+            camera.processKeyboard(Camera::FORWARD, 0.2);
+        }
+
+        if( keys[SDLK_s])
+        {
+            camera.processKeyboard(Camera::BACKWARD, 0.2);
+        }
+
+        if( keys[SDLK_a])
+        {
+            camera.processKeyboard(Camera::LEFT, 0.2);
+        }
+
+        if( keys[SDLK_d])
+        {
+            camera.processKeyboard(Camera::RIGHT, 0.2);
+        }
+
+        float angle = SDL_GetTicks() / 1000.0 * 90;  // 45° per second
+        glm::mat4 anim = glm::rotate(model, glm::radians(angle), axis_y);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(anim));
+        auto view = camera.getViewMatrix();
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
         // draw
         // ----------------------------------------
         glEnableVertexAttribArray(attribute_coord3d);
         glEnableVertexAttribArray(attribute_v_color);
-        glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_TRIANGLES, elementSize, GL_UNSIGNED_SHORT, 0);
         glDisableVertexAttribArray(attribute_coord3d);
         glDisableVertexAttribArray(attribute_v_color);
 

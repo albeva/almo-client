@@ -78,7 +78,7 @@ GLuint Program::getUniformLocation(const std::string& name) const {
 
 
 GLuint Program::getAttribLocation(const std::string& name) const {
-    auto loc = glGetAttribLocation(m_id, name.c_str());
+    auto loc =  glGetAttribLocation(m_id, name.c_str());
     if (loc == -1) {
         std::cerr << "Could not find attribute '" << name << "'" << std::endl;
         throw EXIT_FAILURE;
