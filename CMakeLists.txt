@@ -43,7 +43,10 @@ set(SOURCE_FILES
         almo/Shader.cpp
         almo/Shader.hpp
         almo/Camera.hpp
-        almo/Camera.cpp)
+        almo/Camera.cpp
+		almo/Engine.hpp
+		almo/Engine.cpp
+)
 
 add_executable(almo ${SOURCE_FILES})
 

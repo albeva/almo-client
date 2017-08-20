@@ -164,15 +164,15 @@ class MainGame: public Engine
 
         // Camera controls
         if (m_move[Camera::FORWARD]) {
-            getCamera().processKeyboard(Camera::FORWARD, 0.2);
+            getCamera().processKeyboard(Camera::FORWARD, 0.2f);
         }
 
         if (m_move[Camera::BACKWARD]) {
-            getCamera().processKeyboard(Camera::BACKWARD, 0.2);
+            getCamera().processKeyboard(Camera::BACKWARD, 0.2f);
         }
 
         if (m_move[Camera::LEFT]) {
-            getCamera().processKeyboard(Camera::LEFT, 0.2);
+            getCamera().processKeyboard(Camera::LEFT, 0.2f);
         }
 
         if (m_move[Camera::RIGHT]) {
