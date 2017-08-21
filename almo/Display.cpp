@@ -9,7 +9,8 @@
 #include <iostream>
 using namespace almo;
 
-Display::Display(int width, int height)
+
+Display::Display(const std::string& title, int width, int height)
 : m_width(width)
 , m_height(height)
 , m_window(nullptr)
@@ -27,7 +28,7 @@ Display::Display(int width, int height)
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, GL_TRUE);
 
-    m_window = SDL_CreateWindow("OpenGL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_width, m_height, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
+    m_window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_width, m_height, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
     if (m_window == nullptr) {
         std::cerr << "Error: " << SDL_GetError() << std::endl;
         throw EXIT_FAILURE;
@@ -46,6 +47,10 @@ Display::Display(int width, int height)
         throw EXIT_FAILURE;
     }
 
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_ShowCursor(SDL_DISABLE);
+
+    // SDL_GL_SetSwapInterval(0);
     SDL_GL_GetDrawableSize(m_window, &m_width, &m_height);
     glViewport(0, 0, m_width, m_height);
 
@@ -55,7 +60,6 @@ Display::Display(int width, int height)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 }
-
 
 
 Display::~Display()
@@ -71,6 +75,11 @@ Display::~Display()
     SDL_Quit();
 }
 
+
+void Display::setTitle(const std::string &title)
+{
+    SDL_SetWindowTitle(m_window, title.c_str());
+}
 
 
 void Display::swap()

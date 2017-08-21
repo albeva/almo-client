@@ -9,6 +9,7 @@
 #include <GL/glew.h>
 #include <vector>
 #include <memory>
+#include <glm/glm.hpp>
 
 namespace almo {
 
@@ -28,9 +29,17 @@ namespace almo {
 
         void use();
 
+        // Get locations
+
         GLuint getUniformLocation(const std::string& name) const;
 
         GLuint getAttribLocation(const std::string& name) const;
+
+        // Set matrix
+
+        void setUniform(GLint loc, const glm::mat4& matrix);
+        void setUniform(const std::string& name, const glm::mat4& matrix);
+
 
     private:
         GLuint m_id;
