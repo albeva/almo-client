@@ -25,23 +25,17 @@ using namespace almo;
 
 class MainGame: public Engine
 {
-    // shader program
     Program m_program;
-    // vertex attibute
-    GLint m_attribute_coord3d;
-    // color attribute
-    GLint m_attribute_v_color;
-    // element size
-    GLsizei m_elementSize;
-    // attribute locations
+    bool m_move[4];
+    GLuint m_vertexbuffer;
+    GLuint m_colorbuffer;
+    GLint m_vertxAttribute;
+    GLint m_colorAttribute;
     GLint m_projectionLoc;
     GLint m_viewLoc;
     GLint m_modelLoc;
-    // model
     glm::mat4 m_model;
     glm::vec3 m_axis_y;
-    // keyboard moevements
-    bool m_move[4];
 
 
     // Set up
@@ -53,103 +47,109 @@ class MainGame: public Engine
         m_program.link();
         m_program.use();
 
-        // attribs and uniforms
-        m_attribute_coord3d = m_program.getAttribLocation("pos");
-        m_attribute_v_color = m_program.getAttribLocation("color");
+        // locations
+        m_vertxAttribute = m_program.getAttribLocation("pos");
+        m_colorAttribute = m_program.getAttribLocation("color");
+        m_projectionLoc  = m_program.getUniformLocation("projection");
+        m_viewLoc        = m_program.getUniformLocation("view");
+        m_modelLoc       = m_program.getUniformLocation("model");
 
-        GLuint VAO;
-        glGenVertexArrays(1, &VAO);
-        glBindVertexArray(VAO);
+        // VAO
+        GLuint VertexArrayID;
+        glGenVertexArrays(1, &VertexArrayID);
+        glBindVertexArray(VertexArrayID);
 
-        GLfloat cube_vertices[] = {
-            // front
-            -1.0, -1.0,  1.0,
-            1.0, -1.0,  1.0,
-            1.0,  1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            // back
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0,  1.0, -1.0,
-            -1.0,  1.0, -1.0,
+        // Our vertices. Tree consecutive floats give a 3D vertex; Three consecutive vertices give a triangle.
+        // A cube has 6 faces with 2 triangles each, so this makes 6*2=12 triangles, and 12*3 vertices
+        static const GLfloat g_vertex_buffer_data[] = {
+            -1.0f,-1.0f,-1.0f,
+            -1.0f,-1.0f, 1.0f,
+            -1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f,-1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            -1.0f,-1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f,-1.0f,
+            -1.0f, 1.0f,-1.0f,
+            1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f
         };
 
-        GLuint vbo_cube_vertices;
-        glGenBuffers(1, &vbo_cube_vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(m_attribute_coord3d, // attribute
-                              3,                   // number of elements per vertex, here (x,y,z)
-                              GL_FLOAT,            // the type of each element
-                              GL_FALSE,            // take our values as-is
-                              0,                   // no extra data between each position
-                              0                    // offset of first element
-                              );
-
-        GLfloat cube_colors[] = {
-            // front colors
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            // back colors
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            //
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
+        // One color for each vertex. They were generated randomly.
+        static const GLfloat g_color_buffer_data[] = {
+            1.f,  1.f,  1.f, // A
+            1.f,  1.f,  1.f,
+            1.f,  1.f,  1.f,
+            0.f,  0.f,  0.f, // B
+            0.f,  0.f,  0.f,
+            0.f,  0.f,  0.f,
+            0.f,  1.f,  1.f, // C
+            0.f,  1.f,  1.f,
+            0.f,  1.f,  1.f,
+            0.f,  0.f,  0.f, // B
+            0.f,  0.f,  0.f,
+            0.f,  0.f,  0.f,
+            1.f,  1.f,  1.f, // A
+            1.f,  1.f,  1.f,
+            1.f,  1.f,  1.f,
+            0.f,  1.f,  1.f, // C
+            0.f,  1.f,  1.f,
+            0.f,  1.f,  1.f,
+            1.f,  0.f,  1.f, // D
+            1.f,  0.f,  1.f,
+            1.f,  0.f,  1.f,
+            1.f,  1.f,  0.f, // E
+            1.f,  1.f,  0.f,
+            1.f,  1.f,  0.f,
+            1.f,  1.f,  0.f, // E
+            1.f,  1.f,  0.f,
+            1.f,  1.f,  0.f,
+            .3f,  .6f,  .9f, // F
+            .3f,  .6f,  .9f,
+            .3f,  .6f,  .9f,
+            .3f,  .6f,  .9f, // F
+            .3f,  .6f,  .9f,
+            .3f,  .6f,  .9f,
+            1.f,  0.f,  1.f, // D
+            1.f,  0.f,  1.f,
+            1.f,  0.f,  1.f,
         };
 
-        GLuint vbo_cube_colors;
-        glGenBuffers(1, &vbo_cube_colors);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
-        glVertexAttribPointer(m_attribute_v_color, // attribute
-                              3,                   // number of elements per vertex, here (x,y,z)
-                              GL_FLOAT,            // the type of each element
-                              GL_FALSE,            // take our values as-is
-                              0,                   // no extra data between each position
-                              0                    // offset of first element
-                              );
+        glGenBuffers(1, &m_vertexbuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
-        GLushort cube_elements[] = {
-            // front
-            0, 1, 2,
-            2, 3, 0,
-            // top
-            1, 5, 6,
-            6, 2, 1,
-            // back
-            7, 6, 5,
-            5, 4, 7,
-            // bottom
-            4, 0, 3,
-            3, 7, 4,
-            // left
-            4, 5, 1,
-            1, 0, 4,
-            // right
-            3, 2, 6,
-            6, 7, 3,
-        };
-        GLuint ibo_cube_elements;
-        glGenBuffers(1, &ibo_cube_elements);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
-        int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-        m_elementSize = size / sizeof(GLushort);
-
-        // vars
-        m_projectionLoc = m_program.getUniformLocation("projection");
-        m_viewLoc       = m_program.getUniformLocation("view");
-        m_modelLoc      = m_program.getUniformLocation("model");
+        glGenBuffers(1, &m_colorbuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, m_colorbuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
 
         // cube
-        m_model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
+        m_model  = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -4.f));
         m_axis_y = glm::vec3(.3f, .6f, .9f);
     }
 
@@ -157,27 +157,13 @@ class MainGame: public Engine
     // Render
     virtual void render() override
     {
+        m_program.use();
+
+        move();
+
         // logic
-        // ----------------------------------------
         glm::mat4 projection = glm::perspective(getCamera().getZoom(), (float)getDisplay().getWidth() / (float)getDisplay().getHeight(), 0.1f, 100.0f);
         m_program.setUniform(m_projectionLoc, projection);
-
-        // Camera controls
-        if (m_move[Camera::FORWARD]) {
-            getCamera().processKeyboard(Camera::FORWARD, 0.2f);
-        }
-
-        if (m_move[Camera::BACKWARD]) {
-            getCamera().processKeyboard(Camera::BACKWARD, 0.2f);
-        }
-
-        if (m_move[Camera::LEFT]) {
-            getCamera().processKeyboard(Camera::LEFT, 0.2f);
-        }
-
-        if (m_move[Camera::RIGHT]) {
-            getCamera().processKeyboard(Camera::RIGHT, 0.2);
-        }
 
         // animate cube
         float angle = SDL_GetTicks() / 1000.0 * 90;
@@ -188,12 +174,34 @@ class MainGame: public Engine
         auto view = getCamera().getViewMatrix();
         m_program.setUniform(m_viewLoc, view);
 
-        // draw
-        glEnableVertexAttribArray(m_attribute_coord3d);
-        glEnableVertexAttribArray(m_attribute_v_color);
-        glDrawElements(GL_TRIANGLES, m_elementSize, GL_UNSIGNED_SHORT, 0);
-        glDisableVertexAttribArray(m_attribute_coord3d);
-        glDisableVertexAttribArray(m_attribute_v_color);
+        // 1rst attribute buffer : vertices
+        glEnableVertexAttribArray(m_vertxAttribute);
+        std::cout << m_colorAttribute << '\n';
+        glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer);
+        glVertexAttribPointer(m_vertxAttribute,   // attribute. No particular reason for 0, but must match the layout in the shader.
+                              3,                  // size
+                              GL_FLOAT,           // type
+                              GL_FALSE,           // normalized?
+                              0,                  // stride
+                              (void*)0            // array buffer offset
+                              );
+
+        // 2nd attribute buffer : colors
+        glEnableVertexAttribArray(m_colorAttribute);
+        glBindBuffer(GL_ARRAY_BUFFER, m_colorbuffer);
+        glVertexAttribPointer(m_colorAttribute,   // attribute. No particular reason for 1, but must match the layout in the shader.
+                              3,                  // size
+                              GL_FLOAT,           // type
+                              GL_FALSE,           // normalized?
+                              0,                  // stride
+                              (void*)0            // array buffer offset
+                              );
+
+        // Draw the triangle !
+        glDrawArrays(GL_TRIANGLES, 0, 12 * 3); // 12*3 indices starting at 0 -> 12 triangles
+
+        glDisableVertexAttribArray(m_vertxAttribute);
+        glDisableVertexAttribArray(m_colorAttribute);
     }
 
 
@@ -238,6 +246,27 @@ class MainGame: public Engine
                 break;
             default:
                 return;
+        }
+    }
+
+
+    // moev the camera
+    void move() {
+        // Camera controls
+        if (m_move[Camera::FORWARD]) {
+            getCamera().processKeyboard(Camera::FORWARD, 0.2f);
+        }
+
+        if (m_move[Camera::BACKWARD]) {
+            getCamera().processKeyboard(Camera::BACKWARD, 0.2f);
+        }
+
+        if (m_move[Camera::LEFT]) {
+            getCamera().processKeyboard(Camera::LEFT, 0.2f);
+        }
+
+        if (m_move[Camera::RIGHT]) {
+            getCamera().processKeyboard(Camera::RIGHT, 0.2);
         }
     }
 };

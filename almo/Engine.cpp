@@ -38,14 +38,18 @@ Camera& Engine::getCamera() {
 
 
 int Engine::run() {
+    // clear colour
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+    // set up
     init();
-    
+
+    // run the game loop
     SDL_Event event;
     size_t frameCounter = 0;
     auto startTime = std::chrono::steady_clock::now();
     while (true) {
         // handle events
-        // ----------------------------------------
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
@@ -61,7 +65,6 @@ int Engine::run() {
         }
 
         // FPS
-        // ----------------------------------------
         frameCounter += 1;
         auto currentTime = std::chrono::steady_clock::now();
         if (currentTime - startTime >= std::chrono::seconds{1}) {
@@ -71,16 +74,12 @@ int Engine::run() {
         }
 
         // clear
-        // ----------------------------------------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Draw
-        // ----------------------------------------
         render();
 
         // swap
-        // ----------------------------------------
         getDisplay().swap();
     }
 }
